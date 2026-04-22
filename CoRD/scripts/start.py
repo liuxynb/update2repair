@@ -1,71 +1,109 @@
-# coding=utf-8
+#!/usr/bin/env python3
 
-import os
+import argparse
 import subprocess
+from pathlib import Path
 
-filepath=os.path.realpath(__file__)
-script_dir = os.path.dirname(os.path.normpath(filepath))
-home_dir = os.path.dirname(os.path.normpath(script_dir))
-conf_dir = home_dir+"/conf"
-CONF = conf_dir+"/config.xml"
-# print CONF
-# read from configuration file of the slaves
-
-f = open(CONF)
-start = False
-concactstr = ""
-for line in f:
-    if line.find("setting") == -1:
-	line = line[:-1]
-	concactstr += line
-res=concactstr.split("<attribute>")
-
-slavelist=[]
-for attr in res:
-    if attr.find("helpers.address") != -1:
-	valuestart=attr.find("<value>")
-	valueend=attr.find("</attribute>")
-	attrtmp=attr[valuestart:valueend]
-	slavestmp=attrtmp.split("<value>")
-	for slaveentry in slavestmp:
-	    if slaveentry.find("</value>") != -1:
-		entrysplit=slaveentry.split("/")
-	 	slaveentry=entrysplit[1]
-		endpoint=slaveentry.find("</value>")
-		slave=slaveentry[:endpoint]
-		slavelist.append(slave)
+from cluster_common import (
+    copy_directory,
+    copy_file,
+    default_config_path,
+    helper_hosts,
+    load_config,
+    run_local,
+    run_remote,
+    script_root,
+)
 
 
-# start
-
-print "start coordinator"
-os.system("redis-cli flushall")
-os.system("killall ECCoordinator")
-command="cd "+home_dir+"; ./ECCoordinator &> "+home_dir+"/coor_output &"
-print command
-subprocess.Popen(['/bin/bash', '-c', command])
+SYNC_DIRS = ("conf", "standalone-test", "stripeStore", "upd-data")
+SYNC_FILES = ("ECHelper", "ECPipeClient")
 
 
-for slave in slavelist:
-    print "start slave on " + slave
-    os.system("ssh " + slave + " \"killall ECHelper \"")
-    os.system("ssh " + slave + " \"killall ECPipeClient \"")
-    command="scp "+home_dir+"/ECHelper "+slave+":"+home_dir+"/"
-    os.system(command)
-    command="scp "+home_dir+"/ECPipeClient "+slave+":"+home_dir+"/"
-    os.system(command)
-    
-    command = "ssh "+slave+" \"cd "+home_dir + "; sudo chmod 777 ./ECHelper\""
-    os.system(command)
+def parse_args() -> argparse.Namespace:
+    root = script_root()
+    parser = argparse.ArgumentParser(description="Start a CoRD cluster.")
+    parser.add_argument("--config", default=str(default_config_path()), help="Path to config.xml")
+    parser.add_argument("--remote-dir", default=str(root), help="Remote CoRD directory on helper nodes")
+    parser.add_argument("--bandwidth-kbps", type=int, default=0, help="Apply wondershaper bandwidth limit when > 0")
+    parser.add_argument("--net-adapter", default="eth0", help="Network adapter for wondershaper")
+    parser.add_argument("--skip-sync", action="store_true", help="Do not copy config/binaries/data to helpers")
+    parser.add_argument("--skip-shaping", action="store_true", help="Do not apply wondershaper")
+    return parser.parse_args()
 
-    os.system("ssh " + slave + " \"redis-cli flushall \"")
 
-	# set bandwidth
-    upload_bw = 1 * 1024 * 1024 
-    download_bw = 1 * 1024 * 1024
-    net_adapter = 'eth0'  
-    command = 'ssh {0} "wondershaper -c -a {1}; wondershaper -a {1} -u {2} -d {3}"'.format(slave, net_adapter, upload_bw, download_bw)
-    os.system(command)
+def ensure_remote_layout(host: str, remote_dir: str) -> None:
+    run_remote(
+        host,
+        f"mkdir -p {remote_dir} {remote_dir}/conf {remote_dir}/standalone-test {remote_dir}/stripeStore {remote_dir}/upd-data",
+    )
 
-    command="ssh "+slave+" \"cd "+home_dir+"; ./ECHelper &> "+home_dir+"/node_output &\""
-    subprocess.Popen(['/bin/bash', '-c', command])
+
+def sync_helpers(hosts: list[str], remote_dir: str) -> None:
+    root = script_root()
+    for host in hosts:
+        ensure_remote_layout(host, remote_dir)
+        for directory in SYNC_DIRS:
+            src = root / directory
+            if src.exists():
+                copy_directory(src, host, remote_dir)
+        for filename in SYNC_FILES:
+            src = root / filename
+            if src.exists():
+                copy_file(src, host, remote_dir)
+
+
+def start_local_coordinator(config_path: Path) -> None:
+    root = script_root()
+    run_local("redis-cli flushall", check=False)
+    run_local("killall ECCoordinator", check=False)
+    command = (
+        f"cd {root} && "
+        f"CORD_CONFIG={config_path} ./ECCoordinator > {root}/coor_output 2>&1 &"
+    )
+    subprocess.Popen(command, shell=True)
+
+
+def start_helpers(hosts: list[str], config_path: Path, remote_dir: str, bandwidth_kbps: int, net_adapter: str, skip_shaping: bool) -> None:
+    remote_config = f"{remote_dir}/conf/{config_path.name}"
+    for host in hosts:
+        run_remote(host, "killall ECHelper", check=False)
+        run_remote(host, "killall ECPipeClient", check=False)
+        run_remote(host, "redis-cli flushall", check=False)
+
+        if not skip_shaping and bandwidth_kbps > 0:
+            run_remote(
+                host,
+                f"wondershaper -c -a {net_adapter}; wondershaper -a {net_adapter} -u {bandwidth_kbps} -d {bandwidth_kbps}",
+                check=False,
+            )
+
+        command = (
+            f"cd {remote_dir} && "
+            f"CORD_CONFIG={remote_config} ./ECHelper > {remote_dir}/node_output 2>&1 &"
+        )
+        run_remote(host, command)
+
+
+def main() -> None:
+    args = parse_args()
+    config_path = Path(args.config).resolve()
+    config = load_config(config_path)
+    hosts = helper_hosts(config)
+
+    if not args.skip_sync:
+        sync_helpers(hosts, args.remote_dir)
+
+    start_local_coordinator(config_path)
+    start_helpers(
+        hosts,
+        config_path,
+        args.remote_dir,
+        args.bandwidth_kbps,
+        args.net_adapter,
+        args.skip_shaping,
+    )
+
+
+if __name__ == "__main__":
+    main()

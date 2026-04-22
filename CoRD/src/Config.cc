@@ -1,7 +1,47 @@
 #include "Config.hh"
 
+#include <cerrno>
+#include <cstdlib>
+#include <cstring>
+
+namespace {
+
+unsigned int detectLocalIp(unsigned int coordinatorIp) {
+  int sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock < 0) {
+    return inet_addr("127.0.0.1");
+  }
+
+  sockaddr_in peer;
+  memset(&peer, 0, sizeof(peer));
+  peer.sin_family = AF_INET;
+  peer.sin_port = htons(1);
+  peer.sin_addr.s_addr = coordinatorIp == 0 || coordinatorIp == INADDR_NONE
+      ? inet_addr("8.8.8.8")
+      : coordinatorIp;
+
+  if (connect(sock, reinterpret_cast<sockaddr*>(&peer), sizeof(peer)) != 0) {
+    close(sock);
+    return inet_addr("127.0.0.1");
+  }
+
+  sockaddr_in local;
+  memset(&local, 0, sizeof(local));
+  socklen_t len = sizeof(local);
+  if (getsockname(sock, reinterpret_cast<sockaddr*>(&local), &len) != 0) {
+    close(sock);
+    return inet_addr("127.0.0.1");
+  }
+
+  close(sock);
+  return local.sin_addr.s_addr;
+}
+
+}
+
 Config::Config(std::string confFile) 
 {
+  bool autoLocalIp = false;
   XMLDocument doc;
   doc.LoadFile(confFile.c_str());
   XMLElement* element;
@@ -65,8 +105,12 @@ Config::Config(std::string confFile)
         _coordinatorIP = inet_addr(ele -> NextSiblingElement("value") -> GetText());
     else if (attName == "local.ip.address")
     {
-      std::cout << "local ip: " << ele -> NextSiblingElement("value") -> GetText() << std::endl;
-       _localIP = inet_addr(ele -> NextSiblingElement("value") -> GetText());
+      const char* localIpText = ele -> NextSiblingElement("value") -> GetText();
+      if (strcmp(localIpText, "auto") == 0 || strcmp(localIpText, "AUTO") == 0) {
+        autoLocalIp = true;
+      } else {
+        _localIP = inet_addr(localIpText);
+      }
     }
         
     else if (attName == "helpers.address") 
@@ -110,6 +154,12 @@ Config::Config(std::string confFile)
     std::cout << "FSTYPE: HDFS3" << std::endl;
   }
 
+  if (autoLocalIp) {
+    _localIP = detectLocalIp(_coordinatorIP);
+  }
+
+  std::cout << "local ip: " << inet_ntoa(*reinterpret_cast<in_addr*>(&_localIP)) << std::endl;
+
 }
 
 void Config::display() {
@@ -118,6 +168,13 @@ void Config::display() {
   
 }
 
+std::string Config::getConfigPathFromEnv() {
+  const char* configPath = getenv("CORD_CONFIG");
+  if (configPath != NULL && strlen(configPath) != 0) {
+    return configPath;
+  }
+  return "conf/config.xml";
+}
 
 
 

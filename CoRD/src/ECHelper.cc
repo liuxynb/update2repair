@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   setbuf(stdout, NULL);  // for debugging
   setbuf(stderr, NULL);
 
-  Config* conf = new Config("conf/config.xml");
+  Config* conf = new Config(Config::getConfigPathFromEnv());
   
 
   if (conf -> _coordinatorIP == conf -> _localIP) 
@@ -95,4 +95,3 @@ int main(int argc, char** argv)
   */
   return 0;
 }
-

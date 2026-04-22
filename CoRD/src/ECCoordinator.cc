@@ -15,7 +15,17 @@ using namespace std;
 
 int main(int argc, char** argv) 
 {
-  Coordinator *coord;
+  Config* conf = new Config(Config::getConfigPathFromEnv());
+
+  if (!conf -> _UPPolicy.empty()) 
+  {
+    cout << "ECCoordinator: starting update coordinator" << endl;
+    UPCoordinator coord(conf);
+    coord.doProcess();
+    return 0;
+  }
+
+  Coordinator *coord = NULL;
   if (conf -> _DRPolicy == "ppr") 
   {
     cout << "ECCoordinator: starting PPR coordinator" << endl;
@@ -41,10 +51,15 @@ int main(int argc, char** argv)
       coord = new PipeMulCoordinator(conf);
     }
   }
+
+  if (coord == NULL)
+  {
+    cerr << "ECCoordinator: unsupported degraded-read policy: " << conf -> _DRPolicy << endl;
+    return 1;
+  }
   
   coord -> doProcess();
   
   
   return 0;
 }
-

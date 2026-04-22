@@ -80,6 +80,7 @@ class Config {
 
     Config(std::string confFile);
     void display();
+    static std::string getConfigPathFromEnv();
 };
 
 #endif
