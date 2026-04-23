@@ -1,24 +1,34 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-echo "start to install ECPipe in Hadoop-3"
+set -euo pipefail
 
-echo "copy the source to hadoop-src"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+HADOOP_SRC_DIR="${HADOOP_SRC_DIR:-${1:-}}"
 
-HADOOP_SRC_DIR=/home/zh/桌面/file/hadoop-3.1.1-src
+if [[ -z "${HADOOP_SRC_DIR}" ]]; then
+  echo "Usage: HADOOP_SRC_DIR=/path/to/hadoop-3.1.1-src ./install.sh"
+  echo "   or: ./install.sh /path/to/hadoop-3.1.1-src"
+  exit 1
+fi
 
-cp DFSConfigKeys.java ${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs
+if [[ ! -d "${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs" ]]; then
+  echo "Invalid HADOOP_SRC_DIR: ${HADOOP_SRC_DIR}"
+  exit 1
+fi
 
-cp -R erasurecode ${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode
+cp "${SCRIPT_DIR}/DFSConfigKeys.java" \
+  "${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs"
+rm -rf "${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/erasurecode"
+cp -R "${SCRIPT_DIR}/erasurecode" \
+  "${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode"
+cp "${SCRIPT_DIR}/pom.xml" \
+  "${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs/pom.xml"
 
-echo "update the pom.xml in hadoop-src"
+(
+  cd "${HADOOP_SRC_DIR}"
+  mvn package -DskipTests -Dtar -Dmaven.javadoc.skip=true -Drequire.isal -Pdist,native -DskipShade -e
+)
 
-cp pom.xml ${HADOOP_SRC_DIR}/hadoop-hdfs-project/hadoop-hdfs
-
-echo "rebuild hadoop"
-
-cd ${HADOOP_SRC_DIR}; mvn package -DskipTests -Dtar -Dmaven.javadoc.skip=true -Drequire.isal -Pdist,native -DskipShade -e 
-
-echo "Jedis"
-
-cd -
-cp jedis-3.0.0-SNAPSHOT.jar  ~/.m2/repository/redis/clients/jedis/2.9.0/jedis-2.9.0.jar
+mkdir -p "${HOME}/.m2/repository/redis/clients/jedis/2.9.0"
+cp "${SCRIPT_DIR}/jedis-3.0.0-SNAPSHOT.jar" \
+  "${HOME}/.m2/repository/redis/clients/jedis/2.9.0/jedis-2.9.0.jar"

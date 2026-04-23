@@ -1,21 +1,17 @@
 <?xml version="1.0"?>
 <configuration>
-
 <layoutversion>1</layoutversion>
-
 <schemas>
-<schema id="RS-3-1-32k">
+<schema id="RS-10-4-64k">
 <codec>rs</codec>
-<k>3</k>
-<m>1</m>
+<k>10</k>
+<m>4</m>
 </schema>
 </schemas>
-
 <policies>
 <policy>
-<schema>RS-3-1-32k</schema>
-<cellsize>32768</cellsize>
+<schema>RS-10-4-64k</schema>
+<cellsize>65536</cellsize>
 </policy>
 </policies>
-
 </configuration>

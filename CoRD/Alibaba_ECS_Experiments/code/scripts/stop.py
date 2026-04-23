@@ -1,51 +1,35 @@
-# coding=utf-8
+#!/usr/bin/env python3
 
-import os
+from __future__ import annotations
 
-filepath=os.path.realpath(__file__)
-script_dir = os.path.dirname(os.path.normpath(filepath))
-home_dir = os.path.dirname(os.path.normpath(script_dir))
-conf_dir = home_dir+"/conf"
-CONF = conf_dir+"/config.xml"
-print CONF
-# read from configuration file of the slaves
+import argparse
+from pathlib import Path
 
-f = open(CONF)
-start = False
-concactstr = ""
-for line in f:
-    if line.find("setting") == -1:
-	line = line[:-1]
-	concactstr += line
-res=concactstr.split("<attribute>")
-
-slavelist=[]
-for attr in res:
-    if attr.find("helpers.address") != -1:
-        valuestart=attr.find("<value>")
-        valueend=attr.find("</attribute>")
-        attrtmp=attr[valuestart:valueend]
-        slavestmp=attrtmp.split("<value>")
-        for slaveentry in slavestmp:
-            if slaveentry.find("</value>") != -1:
-                entrysplit=slaveentry.split("/")
-                slaveentry=entrysplit[1]
-                endpoint=slaveentry.find("</value>")
-                slave=slaveentry[:endpoint]
-                slavelist.append(slave)
+from cluster_common import default_env_path, load_env, parse_helper_nodes, run_local, run_remote
 
 
-# stop
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Stop CoRD multi-node experiment.")
+    parser.add_argument("--env", default=str(default_env_path()), help="Path to cluster.env")
+    parser.add_argument("--skip-shaping", action="store_true", help="Skip wondershaper cleanup")
+    return parser.parse_args()
 
-print "stop coordinator"
-os.system("redis-cli flushall")
-os.system("killall ECCoordinator")
 
-for slave in slavelist:
-    print "stop slave on " + slave
-    os.system("ssh " + slave + " \"killall ECHelper \"")
-    os.system("ssh " + slave + " \"redis-cli flushall \"")
+def main() -> None:
+    args = parse_args()
+    env = load_env(Path(args.env).resolve())
+    helpers = parse_helper_nodes(env["HELPER_NODES"])
 
-    net_adapter = 'eth0' 
-    command = 'ssh {0} "wondershaper -c -a {1}"'.format(slave, net_adapter)
-    os.system(command)
+    run_local("redis-cli flushall", check=False)
+    run_local("killall ECCoordinator", check=False)
+    for helper in helpers:
+        host = helper["ssh"]
+        run_remote(host, "killall ECHelper", check=False)
+        run_remote(host, "killall ECPipeClient", check=False)
+        run_remote(host, "redis-cli flushall", check=False)
+        if not args.skip_shaping:
+            run_remote(host, f"wondershaper -c -a {env['NET_ADAPTER']}", check=False)
+
+
+if __name__ == "__main__":
+    main()

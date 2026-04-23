@@ -195,8 +195,9 @@ void UPCoordinator::UpdateReqHandler()
 
             res = splite_string(line, c);
 
-            if ((_conf->_traceType == "MSR" && res[3] == "Read") || (_conf->_traceType == "Ali" && res[1] == "R") || 
-            (_conf->_traceType == "Ten" && res[3] == "0"))
+            if ((_conf->_traceType == "MSR" && res[3] == "Read") || 
+            ((_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud") && res[1] == "R") || 
+            ((_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud") && res[3] == "0"))
                 continue;
 
             if (_conf->_traceType == "MSR")
@@ -210,7 +211,7 @@ void UPCoordinator::UpdateReqHandler()
                 stream<<res[5];
                 stream>>update_size;
             }
-            else if (_conf->_traceType == "Ali")
+            else if (_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud")
             {
                 stream.clear();
                 stream.str("");
@@ -221,7 +222,7 @@ void UPCoordinator::UpdateReqHandler()
                 stream<<res[3];
                 stream>>update_size;
             }
-            else if (_conf->_traceType == "Ten")
+            else if (_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud")
             {
                 stream.clear();
                 stream.str("");
@@ -1282,8 +1283,9 @@ void UPCoordinator::single_doProcess()
         {
             vector<string> res = splite_string(line, ',');
 
-            if ((_conf->_traceType == "MSR" && res[3] == "Read") || (_conf->_traceType == "Ali" && res[1] == "R") || 
-            (_conf->_traceType == "Ten" && res[3] == "0"))
+            if ((_conf->_traceType == "MSR" && res[3] == "Read") || 
+            ((_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud") && res[1] == "R") || 
+            ((_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud") && res[3] == "0"))
                 continue;
 
             if (_conf->_traceType == "MSR")
@@ -1297,7 +1299,7 @@ void UPCoordinator::single_doProcess()
                 stream<<res[5];
                 stream>>update_size;
             }
-            else if (_conf->_traceType == "Ali")
+            else if (_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud")
             {
                 stream.clear();
                 stream.str("");
@@ -1308,7 +1310,7 @@ void UPCoordinator::single_doProcess()
                 stream<<res[3];
                 stream>>update_size;
             }
-            else if (_conf->_traceType == "Ten")
+            else if (_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud")
             {
                 stream.clear();
                 stream.str("");
@@ -1700,8 +1702,9 @@ void UPCoordinator::multi_doProcess()
             {
                 vector<string> res = splite_string(line, ',');
 
-                if ((_conf->_traceType == "MSR" && res[3] == "Read") || (_conf->_traceType == "Ali" && res[1] == "R") || 
-                (_conf->_traceType == "Ten" && res[3] == "0"))
+                if ((_conf->_traceType == "MSR" && res[3] == "Read") || 
+                ((_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud") && res[1] == "R") || 
+                ((_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud") && res[3] == "0"))
                     continue;
 
                 if (_conf->_traceType == "MSR")
@@ -1715,7 +1718,7 @@ void UPCoordinator::multi_doProcess()
                     stream<<res[5];
                     stream>>update_size;
                 }
-                else if (_conf->_traceType == "Ali")
+                else if (_conf->_traceType == "Ali" || _conf->_traceType == "AliCloud")
                 {
                     stream.clear();
                     stream.str("");
@@ -1726,7 +1729,7 @@ void UPCoordinator::multi_doProcess()
                     stream<<res[3];
                     stream>>update_size;
                 }
-                else if (_conf->_traceType == "Ten")
+                else if (_conf->_traceType == "Ten" || _conf->_traceType == "TenCloud")
                 {
                     stream.clear();
                     stream.str("");
@@ -1910,6 +1913,5 @@ void UPCoordinator::multi_doProcess()
     }
     
 }
-
 
 

@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   setbuf(stdout, NULL);  // for debugging
   setbuf(stderr, NULL);
 
-  Config* conf = new Config("conf/config.xml");
+  Config* conf = new Config(Config::getConfigPathFromEnv());
   
 
   if (conf -> _coordinatorIP == conf -> _localIP) 
@@ -43,11 +43,13 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  UPNode* node = new UPNode(conf);
-  //node -> debug();
-  node -> doProcess();
+  if (!conf -> _UPPolicy.empty())
+  {
+    UPNode* node = new UPNode(conf);
+    node -> doProcess();
+    return 0;
+  }
 
-  /*
   BlockReporter::report(conf -> _coordinatorIP, conf -> _blkDir.c_str(), conf -> _localIP);
   int workerThreadNum = conf -> _agWorkerThreadNum;
   thread thrds[workerThreadNum];
@@ -92,7 +94,5 @@ int main(int argc, char** argv)
   {
     thrds[i].join();
   }
-  */
   return 0;
 }
-

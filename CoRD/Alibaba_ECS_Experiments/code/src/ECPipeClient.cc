@@ -15,7 +15,7 @@ int main(int argc, char** argv)
     cout << "Us age: " << argv[0] << " [lost file names]" << endl;
     return 0;
   }
-  Config* conf = new Config("conf/config.xml");
+  Config* conf = new Config(Config::getConfigPathFromEnv());
   
   // modified by jhli
   // string filename(argv[1]);
@@ -36,4 +36,3 @@ int main(int argc, char** argv)
   // cip.output2File("testfileOut");
   return 0;
 }
-
