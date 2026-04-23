@@ -12,21 +12,18 @@
 
 | 实验 | 内容 | 当前状态 |
 | --- | --- | --- |
-| Exp 1 | 大规模仿真：更新流量对比 | 已删除 |
-| Exp 2 | 大规模仿真：纠删码参数影响 | 已删除 |
-| Exp 3 | 大规模仿真：块大小影响 | 已删除 |
 | Exp 4 | 阿里云集群：不同带宽下的更新吞吐量 | 支持 |
 | Exp 5 | 阿里云集群：不同 log size 下的更新吞吐量 | 支持 |
 | Exp 6 | 阿里云集群：Flipping 策略收益 | 支持 |
-| Exp 7 | 计算/内存开销评估 | 可基于当前可编译版本手工补测 |
 
 如果你只关注当前仓库实际可运行内容，请直接看 `Exp 4 - 6`。
 
 ## 目录说明
 
-- [`CoRD/`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/CoRD)：主代码目录。
-- [`DEPLOYMENT.md`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/DEPLOYMENT.md)：完整多节点部署文档。
-- [`CoRD/conf/config.xml`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/CoRD/conf/config.xml)：集群实验默认配置模板。
+- [`CoRD/`]：主代码目录。
+- [`DEPLOYMENT.md`]：完整多节点部署文档。
+- [`HDFS_RUNBOOK.md`]：使用真实 HDFS3 运行 CoRD 的完整指南。
+- [`CoRD/conf/config.xml`]：集群实验默认配置模板。
 
 ## 一次性准备
 
@@ -52,7 +49,7 @@ make
 
 ## 配置集群
 
-编辑 [`CoRD/conf/config.xml`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/CoRD/conf/config.xml)：
+编辑 [`CoRD/conf/config.xml`]：
 
 - `coordinator.address`：改成 coordinator 节点的内网 IP。
 - `helpers.address`：按顺序填写所有 helper 节点的内网 IP，数量必须等于 `erasure.code.n`。
@@ -161,4 +158,8 @@ ps -o pid,ppid,%mem,%cpu,command -p <pid>
 
 多节点部署、SSH 免密、远端目录规划、脚本参数说明，请看：
 
-- [`DEPLOYMENT.md`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/DEPLOYMENT.md)
+- [`DEPLOYMENT.md`]
+
+如果你需要的是基于真实 HDFS3 的恢复链路，而不是默认的本地 update 实验链路，请看：
+
+- [`HDFS_RUNBOOK.md`]

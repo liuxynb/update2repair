@@ -1,0 +1,20 @@
+<setting>
+  <attribute><name>erasure.code.k</name><value>3</value></attribute>
+  <attribute><name>erasure.code.n</name><value>4</value></attribute>
+  <attribute><name>rs.code.config.file</name><value>conf/rsEncMat_3_4</value></attribute>
+  <attribute><name>packet.size</name><value>32768</value></attribute>
+  <attribute><name>packet.count</name><value>32</value></attribute>
+  <attribute><name>degraded.read.policy</name><value>ecpipe</value></attribute>
+  <attribute><name>block.size(KB)</name><value>1024</value></attribute>
+  <attribute><name>ecpipe.policy</name><value>basic</value></attribute>
+  <attribute><name>coordinator.address</name><value>192.168.0.1</value></attribute>
+  <attribute><name>file.system.type</name><value>HDFS3</value></attribute>
+  <attribute><name>block.directory</name><value>/data/hdfs/dfs/data/current/BP-REPLACE-ME/current/finalized</value></attribute>
+  <attribute><name>helpers.address</name>
+    <value>default/192.168.0.3</value>
+    <value>default/192.168.0.4</value>
+    <value>default/192.168.0.5</value>
+    <value>default/192.168.0.6</value>
+  </attribute>
+  <attribute><name>local.ip.address</name><value>auto</value></attribute>
+</setting>

@@ -36,18 +36,19 @@ int main(int argc, char** argv)
 
   Config* conf = new Config(Config::getConfigPathFromEnv());
   
-
   if (conf -> _coordinatorIP == conf -> _localIP) 
   {
     printf("%s: ERROR: local IP is wrong\n", __func__);
     return 1;
   }
 
-  UPNode* node = new UPNode(conf);
-  //node -> debug();
-  node -> doProcess();
+  if (!conf -> _UPPolicy.empty())
+  {
+    UPNode* node = new UPNode(conf);
+    node -> doProcess();
+    return 0;
+  }
 
-  /*
   BlockReporter::report(conf -> _coordinatorIP, conf -> _blkDir.c_str(), conf -> _localIP);
   int workerThreadNum = conf -> _agWorkerThreadNum;
   thread thrds[workerThreadNum];
@@ -92,6 +93,6 @@ int main(int argc, char** argv)
   {
     thrds[i].join();
   }
-  */
+
   return 0;
 }
