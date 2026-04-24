@@ -7,3 +7,4 @@ CoRD/*.dSYM/
 CoRD/coor_output
 CoRD/node_output
 CoRD/*-result.csv
+.worktrees/
