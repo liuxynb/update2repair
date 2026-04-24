@@ -4,17 +4,16 @@
 
 ## 1. 部署拓扑
 
-推荐最小拓扑：
+推荐目标拓扑（RS(4,8)）：
 
-- 1 台 coordinator
-- 14 台 helper
+- `192.168.140.101` 仅运行 coordinator
+- `192.168.140.102-105` 为 4 个数据块 helper
+- `192.168.140.106-109` 为 4 个校验块 helper
 
 默认配置对应：
 
-- `erasure.code.k = 10`
-- `erasure.code.n = 14`
-
-也就是说 `helpers.address` 需要提供 14 个 helper 地址。
+- `erasure.code.k = 4`
+- `erasure.code.n = 8`
 
 ## 2. 前置条件
 
@@ -54,12 +53,13 @@ bash setup.sh
 ### 4.1 必改项
 
 - `coordinator.address`
-  - 填 coordinator 的内网 IP。
+  - 填 coordinator 的内网 IP（RS(4,8) 默认是 `192.168.140.101`）。
 - `helpers.address`
-  - 填所有 helper 的内网 IP。
+  - 必须正好列出 `192.168.140.102-109` 八台机器（最后一台是 `192.168.140.109`）。
   - 数量必须和 `erasure.code.n` 一致。
 - `trace.type`
   - `Ali` 或 `Ten`。
+- 对于 `update.policy=all` 的 standalone 实验，helper 读写的是 `upd-data/blk_<id>`。
 
 ### 4.2 建议保持默认
 
@@ -134,9 +134,16 @@ python3 scripts/start.py --bandwidth-kbps 1048576 --net-adapter eth0
 1. 读取 `config.xml`
 2. 解析全部 helper IP
 3. 把 `conf/`、`standalone-test/`、`stripeStore/`、`upd-data/` 以及二进制同步到 helper
-4. 本地启动 `ECCoordinator`
-5. 远端启动 `ECHelper`
-6. 可选应用带宽限制
+4. 同步后按主机删除 `upd-data/` 下非本机所属的 `blk_*`：`102 -> blk_0`、`103 -> blk_1`、`104 -> blk_2`、`105 -> blk_3`、`106 -> blk_4`、`107 -> blk_5`、`108 -> blk_6`、`109 -> blk_7`
+5. 本地启动 `ECCoordinator`
+6. 远端启动 `ECHelper`
+7. 可选应用带宽限制
+
+第一次验证建议使用：
+
+```bash
+python3 scripts/start.py --skip-shaping
+```
 
 ## 7. 停止集群
 

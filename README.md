@@ -51,11 +51,10 @@ make
 
 编辑 [`CoRD/conf/config.xml`]：
 
-- `coordinator.address`：改成 coordinator 节点的内网 IP。
-- `helpers.address`：按顺序填写所有 helper 节点的内网 IP，数量必须等于 `erasure.code.n`。
-- `trace.type`：`Ali` 或 `Ten`。
-- `log.size(MB)`：Exp 5 需要改这个值。
-- `block.size(KB)`：默认是论文常用的 `64`。
+- 默认 standalone 集群拓扑为 `1 + 8`：`192.168.140.101` 为 coordinator，`192.168.140.102-109` 为 helper。
+- 当前默认实验配置为 `erasure.code.k=4`、`erasure.code.n=8`。
+- update 实验实际读写的是 `upd-data/blk_<id>`，不是 `standalone-test/`。
+- `scripts/start.py` 会在同步后按 helper IP 保留对应的 `blk_<id>` 文件，确保 8 个 helper 各持有一个块。
 
 当前默认配置已经切到：
 

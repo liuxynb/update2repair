@@ -13,6 +13,7 @@ from cluster_common import (
     run_local,
     run_remote,
     script_root,
+    shlex_quote,
 )
 
 
@@ -37,6 +38,35 @@ def ensure_remote_layout(host: str, remote_dir: str) -> None:
         host,
         f"mkdir -p {remote_dir} {remote_dir}/conf {remote_dir}/standalone-test {remote_dir}/stripeStore {remote_dir}/upd-data",
     )
+
+
+def helper_block_map() -> dict[str, str]:
+    return {
+        "192.168.140.102": "blk_0",
+        "192.168.140.103": "blk_1",
+        "192.168.140.104": "blk_2",
+        "192.168.140.105": "blk_3",
+        "192.168.140.106": "blk_4",
+        "192.168.140.107": "blk_5",
+        "192.168.140.108": "blk_6",
+        "192.168.140.109": "blk_7",
+    }
+
+
+def place_helper_blocks(hosts: list[str], remote_dir: str) -> None:
+    block_map = helper_block_map()
+    missing_hosts = [host for host in hosts if host not in block_map]
+    if missing_hosts:
+        raise RuntimeError(f"missing helper block mapping for: {', '.join(missing_hosts)}")
+
+    remote_upd_dir = f"{remote_dir}/upd-data"
+    for host in hosts:
+        keep = block_map[host]
+        command = (
+            f"find {shlex_quote(remote_upd_dir)} -maxdepth 1 -type f -name 'blk_*' "
+            f"! -name {shlex_quote(keep)} -delete"
+        )
+        run_remote(host, command)
 
 
 def sync_helpers(hosts: list[str], remote_dir: str) -> None:
@@ -93,6 +123,7 @@ def main() -> None:
 
     if not args.skip_sync:
         sync_helpers(hosts, args.remote_dir)
+        place_helper_blocks(hosts, args.remote_dir)
 
     start_local_coordinator(config_path)
     start_helpers(

@@ -1,7 +1,7 @@
 <setting>
-  <attribute><name>erasure.code.k</name><value>10</value></attribute>
-  <attribute><name>erasure.code.n</name><value>14</value></attribute>
-  <attribute><name>rs.code.config.file</name><value>rsEncMat_3_4</value></attribute>
+  <attribute><name>erasure.code.k</name><value>4</value></attribute>
+  <attribute><name>erasure.code.n</name><value>8</value></attribute>
+  <attribute><name>rs.code.config.file</name><value>conf/rsEncMat_4_8</value></attribute>
   <attribute><name>packet.size</name><value>32768</value></attribute>
   <attribute><name>packet.count</name><value>32</value></attribute>
   <attribute><name>degraded.read.policy</name><value>conv</value></attribute>
@@ -10,7 +10,7 @@
   <attribute><name>update.request.way</name><value>trace</value></attribute>
   <attribute><name>block.size(KB)</name><value>64</value></attribute>
   <attribute><name>ecpipe.policy</name><value>basic</value></attribute>
-  <attribute><name>coordinator.address</name><value>10.0.0.10</value></attribute>
+  <attribute><name>coordinator.address</name><value>192.168.140.101</value></attribute>
   <attribute><name>file.system.type</name><value>standalone</value></attribute>
   <attribute><name>stripe.store</name><value>stripeStore</value></attribute>
   <attribute><name>block.directory</name><value>standalone-test</value></attribute>
@@ -18,20 +18,14 @@
   <attribute><name>trace.directory</name><value>trace</value></attribute>
   <attribute><name>trace.type</name><value>Ali</value></attribute>
   <attribute><name>helpers.address</name>
-    <value>default/10.0.0.11</value>
-    <value>default/10.0.0.12</value>
-    <value>default/10.0.0.13</value>
-    <value>default/10.0.0.14</value>
-    <value>default/10.0.0.15</value>
-    <value>default/10.0.0.16</value>
-    <value>default/10.0.0.17</value>
-    <value>default/10.0.0.18</value>
-    <value>default/10.0.0.19</value>
-    <value>default/10.0.0.20</value>
-    <value>default/10.0.0.21</value>
-    <value>default/10.0.0.22</value>
-    <value>default/10.0.0.23</value>
-    <value>default/10.0.0.24</value>
+    <value>default/192.168.140.102</value>
+    <value>default/192.168.140.103</value>
+    <value>default/192.168.140.104</value>
+    <value>default/192.168.140.105</value>
+    <value>default/192.168.140.106</value>
+    <value>default/192.168.140.107</value>
+    <value>default/192.168.140.108</value>
+    <value>default/192.168.140.109</value>
   </attribute>
   <attribute><name>local.ip.address</name><value>auto</value></attribute>
 </setting>
