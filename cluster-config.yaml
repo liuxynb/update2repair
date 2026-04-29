@@ -1,0 +1,66 @@
+# CoRD + HDFS3 Cluster Configuration
+# Modify this file to match your cluster topology, then run:
+#   python3 deploy/generate_configs.py
+#
+# This configuration supports both:
+#   - HDFS3 mode (real HDFS degraded read recovery)
+#   - Standalone mode (local update experiments)
+
+cluster:
+  name: cord-hdfs3
+  ssh_user: cord
+  # ssh_key: ~/.ssh/id_rsa          # Optional: path to SSH private key
+  # ssh_password: cord123           # Optional: for password-based sudo
+
+coordinator:
+  ip: 192.168.140.101
+  # The coordinator runs ECCoordinator and acts as HDFS client
+  # It also compiles Hadoop with CoRD patches
+
+namenode:
+  ip: 192.168.140.102
+  # Dedicated NameNode. Can be colocated with coordinator if resources permit.
+
+datanodes:
+  # Each datanode also runs an ECHelper.
+  # For RS-3-1-32k (k=3, n=4), exactly 4 datanodes are required.
+  - ip: 192.168.140.103
+  - ip: 192.168.140.104
+  - ip: 192.168.140.105
+  - ip: 192.168.140.106
+
+cord:
+  # Erasure coding parameters. Must match the HDFS EC policy.
+  erasure_code_k: 3        # data blocks per stripe
+  erasure_code_n: 4        # total blocks per stripe (data + parity)
+  packet_size: 32768       # bytes per packet
+  packet_count: 32         # packets per block
+  block_size_kb: 1024      # block size in KB (must equal packet_size * packet_count / 1024)
+  degraded_read_policy: ecpipe
+  ecpipe_policy: basic
+  # EC policy name registered with HDFS. Must match user_ec_policies.xml.
+  ec_policy_name: RS-3-1-32k
+
+hdfs:
+  # Hadoop 3.1.1 source build paths
+  hadoop_src_dir: /data/hadoop-src/hadoop-3.1.1-src
+  hadoop_home: /data/hadoop-src/hadoop-3.1.1-src/hadoop-dist/target/hadoop-3.1.1
+  java_home: /usr/lib/jvm/java-8-openjdk-amd64
+
+  # HDFS runtime directories
+  hadoop_tmp_dir: /data/hadoop
+  # DataNode local storage. HDFS block files live under:
+  #   <data_dir>/data/current/<block-pool-id>/current/finalized/
+  data_dir: /data/hadoop
+
+  # Block and packet sizing. MUST satisfy:
+  #   dfs.blocksize == ecpipe.packetsize * ecpipe.packetcnt
+  blocksize: 1048576       # 1 MB
+  ecpipe_packetsize: 32768 # 32 KB
+  ecpipe_packetcnt: 32
+
+  # DataNode block report interval (ms). Lower = faster failure detection.
+  blockreport_interval_ms: 20000
+
+  # Replication factor for non-EC files. Keep at 1 for test clusters.
+  replication: 1

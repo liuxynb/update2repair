@@ -8,3 +8,6 @@ CoRD/coor_output
 CoRD/node_output
 CoRD/*-result.csv
 .worktrees/
+.claude/
+*.pyc
+__pycache__/

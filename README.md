@@ -1,164 +1,139 @@
-# CoRD 阿里云集群实验复现说明
+# CoRD 集群实验复现
 
-本仓库已经按当前需求收敛为“真实集群实验优先”的版本，目标是：
+本仓库包含 CoRD（Cooperative Recovery for Degraded reads）的完整实现，支持两种运行模式：
 
-- 保留并修复 `CoRD/` 主体代码，使其可以直接编译。
-- 补齐阿里云/ECS 多节点部署所需的配置、启动、停止和同步链路。
-- 删除大规模仿真实验 `Exp 1 - 3` 的实现与说明，避免后续维护两套实验路径。
+1. **Standalone 模式**：本地更新实验（Exp 4-6），基于 trace 重放
+2. **HDFS3 模式**：真实 HDFS 降级恢复链路，基于 Hadoop 3.1.1 EC 机制
 
-## 当前仓库范围
+---
 
-论文实验与当前仓库状态对应关系如下：
+## 快速开始
 
-| 实验 | 内容 | 当前状态 |
-| --- | --- | --- |
-| Exp 4 | 阿里云集群：不同带宽下的更新吞吐量 | 支持 |
-| Exp 5 | 阿里云集群：不同 log size 下的更新吞吐量 | 支持 |
-| Exp 6 | 阿里云集群：Flipping 策略收益 | 支持 |
+### 1. 配置集群拓扑
 
-如果你只关注当前仓库实际可运行内容，请直接看 `Exp 4 - 6`。
+编辑仓库根目录的 `cluster-config.yaml`，填入你的节点 IP：
 
-## 目录说明
+```yaml
+coordinator:
+  ip: 192.168.140.101
 
-- [`CoRD/`]：主代码目录。
-- [`DEPLOYMENT.md`]：完整多节点部署文档。
-- [`HDFS_RUNBOOK.md`]：使用真实 HDFS3 运行 CoRD 的完整指南。
-- [`CoRD/conf/config.xml`]：集群实验默认配置模板。
+namenode:
+  ip: 192.168.140.102
 
-## 一次性准备
+datanodes:
+  - ip: 192.168.140.103
+  - ip: 192.168.140.104
+  - ip: 192.168.140.105
+  - ip: 192.168.140.106
+```
 
-1. 在所有节点准备好同一份仓库，或者至少保证 coordinator 节点拥有完整仓库。
-2. 在每个节点执行：
+### 2. 生成配置
+
+```bash
+python3 deploy/generate_configs.py
+```
+
+### 3. 部署到集群
+
+```bash
+python3 deploy/deploy.py --step all
+```
+
+### 4. 详细部署文档
+
+- **完整部署指南（含 HDFS3）**：[`DEPLOYMENT.md`](DEPLOYMENT.md)
+- **Standalone 实验（Exp 4-6）**：见下文
+
+---
+
+## Standalone 实验（Exp 4-6）
+
+### 前置准备
+
+在所有节点执行：
 
 ```bash
 cd CoRD
 bash setup.sh
-```
-
-3. 在 coordinator 节点编译：
-
-```bash
-cd CoRD
 make
 ```
 
-说明：
+### 配置
 
-- `make` 现在会自动在 `CoRD/.deps/local` 下构建并使用本地 `gf-complete` / `hiredis`，不再依赖机器预装。
-- `local.ip.address` 默认支持 `auto`，同一份 `config.xml` 可以分发到所有 helper，节点会自动识别自己的本机 IP。
+编辑 `CoRD/conf/config.xml`（默认 standalone 配置）：
 
-## 配置集群
+```xml
+<setting>
+  <attribute><name>coordinator.address</name><value>192.168.140.101</value></attribute>
+  <attribute><name>helpers.address</name>
+    <value>default/192.168.140.102</value>
+    <value>default/192.168.140.103</value>
+    ...
+  </attribute>
+</setting>
+```
 
-编辑 [`CoRD/conf/config.xml`]：
-
-- 默认 standalone 集群拓扑为 `1 + 8`：`192.168.140.101` 为 coordinator，`192.168.140.102-109` 为 helper。
-- 当前默认实验配置为 `erasure.code.k=4`、`erasure.code.n=8`。
-- update 实验实际读写的是 `upd-data/blk_<id>`，不是 `standalone-test/`。
-- `scripts/start.py` 会在同步后按 helper IP 保留对应的 `blk_<id>` 文件，确保 8 个 helper 各持有一个块。
-
-当前默认配置已经切到：
-
-- `update.policy=all`
-- `update.request.way=trace`
-- `trace.type=Ali`
-
-这意味着一次跑完会同时输出 `raid / delta / crd / crd_flip` 四列吞吐量，适合直接做 Exp 4 - 6。
-
-## 启动与停止
-
-在 coordinator 节点执行：
+### 启动
 
 ```bash
 cd CoRD
-python3 scripts/start.py --bandwidth-kbps 1048576 --net-adapter eth0
+python3 scripts/start.py --skip-shaping
 ```
 
-实验结束后停止：
+### 停止
 
 ```bash
-cd CoRD
-python3 scripts/stop.py --net-adapter eth0
+python3 scripts/stop.py --skip-shaping
 ```
 
-脚本行为：
+### 实验参数
 
-- 默认会把 `conf/`、`standalone-test/`、`stripeStore/`、`upd-data/` 以及 `ECHelper`、`ECPipeClient` 同步到 helper。
-- 默认会在 helper 上清 Redis、拉起 `ECHelper`，并可选地通过 `wondershaper` 限速。
-- coordinator 本地会拉起 `ECCoordinator`，输出写入 `CoRD/coor_output`。
+| 实验 | 修改项 | 命令 |
+|------|--------|------|
+| Exp 4（带宽敏感度） | `--bandwidth-kbps` | `python3 scripts/start.py --bandwidth-kbps 1048576` |
+| Exp 5（Log Size） | `log.size(MB)` | 修改 `config.xml` 后重启 |
+| Exp 6（Flipping） | `update.policy=all` | 默认已启用，看 `Ali-result.csv` |
 
-## 复现 Exp 4 - 6
+---
 
-### Exp 4：带宽敏感度
+## HDFS3 真实恢复实验
 
-固定：
+见 [`DEPLOYMENT.md`](DEPLOYMENT.md) 第 3-7 节。
 
-- `log.size(MB)=4`
-- `trace.type=Ali`
-- `update.policy=all`
+关键步骤：
+1. 安装 ISA-L 并编译 Hadoop 3.1.1（带 CoRD 补丁）
+2. 配置 `cluster-config.yaml` 并生成配置
+3. 格式化 NameNode 并启动 HDFS
+4. 确认 `block.directory` 真实路径后启动 CoRD
+5. 删除一个 EC block，观察 CoRD 恢复过程
 
-分别执行：
+---
 
-```bash
-python3 scripts/start.py --bandwidth-kbps 524288 --net-adapter eth0
-python3 scripts/start.py --bandwidth-kbps 1048576 --net-adapter eth0
-python3 scripts/start.py --bandwidth-kbps 3145728 --net-adapter eth0
-```
+## 目录说明
 
-每次运行结束后查看 coordinator 工作目录生成的 `Ali-result.csv`。
+| 目录/文件 | 说明 |
+|-----------|------|
+| `CoRD/` | 主代码目录 |
+| `CoRD/src/` | C++ 源码 |
+| `CoRD/hadoop-3-integrate/` | Hadoop 3.1.1 CoRD 补丁 |
+| `CoRD/scripts/` | 启动/停止/同步脚本 |
+| `CoRD/conf/` | 配置文件模板 |
+| `deploy/` | 集群部署自动化脚本 |
+| `cluster-config.yaml` | 集群拓扑定义（用户修改） |
+| `generated/` | 生成的配置文件（由脚本产出） |
+| `DEPLOYMENT.md` | 完整部署指南 |
 
-### Exp 5：Log Size 敏感度
+---
 
-固定带宽为 `3145728` Kbps，分别将 [`CoRD/conf/config.xml`](/Users/liuxingyuan/csLearning/essay/ICCD26/update2repair/CoRD/conf/config.xml) 中的 `log.size(MB)` 改为：
+## 通用化配置与迁移
 
-- `1`
-- `4`
-- `16`
+所有配置都通过 `cluster-config.yaml` 参数化：
 
-每改一次重新启动一次集群并记录 `Ali-result.csv`。
+- 修改 IP 列表即可适配新集群
+- 修改 `erasure_code_k/n` 即可切换 EC 策略
+- 修改 `hdfs.*` 路径即可适配不同的 Hadoop 安装位置
 
-### Exp 6：Flipping 收益
-
-保持：
-
-- `update.policy=all`
-- `update.request.way=trace`
-
-运行后结果文件中会同时给出：
-
-- `crd`
-- `crd_flip`
-
-按 `(crd_flip - crd) / crd * 100%` 计算提升率即可。
-
-## Exp 7：资源开销评估
-
-当前仓库没有单独的自动化脚本，但代码已可编译，可以直接在 coordinator 上用系统工具采样：
-
-```bash
-/usr/bin/time -v ./ECCoordinator
-```
-
-或配合：
-
-```bash
-ps -o pid,ppid,%mem,%cpu,command -p <pid>
-```
-
-记录 coordinator/helper 的 CPU、内存和运行时长即可。
-
-## 常见结果文件
-
-- `CoRD/coor_output`
-- `CoRD/node_output`
-- `CoRD/Ali-result.csv`
-- `CoRD/Ten-result.csv`
-
-## 详细部署文档
-
-多节点部署、SSH 免密、远端目录规划、脚本参数说明，请看：
-
-- [`DEPLOYMENT.md`]
-
-如果你需要的是基于真实 HDFS3 的恢复链路，而不是默认的本地 update 实验链路，请看：
-
-- [`HDFS_RUNBOOK.md`]
+大集群迁移时只需：
+1. 更新 `cluster-config.yaml`
+2. `python3 deploy/generate_configs.py`
+3. `python3 deploy/deploy.py --step all`
